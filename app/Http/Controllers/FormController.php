@@ -91,16 +91,16 @@ class FormController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'fields' => 'required|array',
-            'fields.*.type' => 'required|string|in:text,number,date,select,subform',
+            'fields.*.type' => 'required|string|in:text,number,date,select,subform,job_number,autocomplete',
             'fields.*.label' => 'required|string|max:255',
-            'fields.*.options' => 'array|required_if:fields.*.type,select',
+            'fields.*.options' => 'array|required_if:fields.*.type,select,autocomplete',
             'fields.*.subform_id' => 'required_if:fields.*.type,subform',
             'fields.*.options.*.value' => 'required_with:fields.*.options|string',
         ], [
             'fields.*.options.required_if' => 'กรุณาเพิ่มตัวเลือกในกรณีที่ประเภทของคำตอบเป็น ตัวเลือก',
             'fields.*.options.*.value.required_with' => 'กรุณาเพิ่มค่าในตัวเลือก',
             'fields.*.options.*.value.string' => 'ค่าของตัวเลือกต้องเป็นข้อความ',
-            'fields.*.type.in' => 'ประเภทของรายการต้องเป็น ข้อความ, ตัวเลข, วันที่, แบบฟอร์มย่อย หรือ ตัวเลือก เท่านั้น',
+            'fields.*.type.in' => 'ประเภทของรายการต้องเป็น ข้อความ, ตัวเลข, วันที่, แบบฟอร์มย่อย, ตัวเลือก, เลขที่งาน (Auto) หรือ ข้อความ+ตัวเลือก เท่านั้น',
             'fields.*.label.required' => 'กรุณาเพิ่มชื่อรายการ',
             'fields.*.label.string' => 'ชื่อรายการต้องเป็นข้อความ',
             'fields.required' => 'กรุณาเพิ่มรายการ',
@@ -137,7 +137,7 @@ class FormController extends Controller
                     'is_default' => $request->user()->username === 'tsmcadmin' ? true : false,
                 ]);
 
-                if ($field['type'] === 'select') {
+                if (in_array($field['type'], ['select', 'autocomplete'])) {
                     foreach ($field['options'] ?? [] as $option) {
                         FieldOption::create([
                             'field_id' => $newField->id,
@@ -184,16 +184,16 @@ class FormController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'fields' => 'required|array',
-            'fields.*.type' => 'required|string|in:text,number,select,subform,date',
+            'fields.*.type' => 'required|string|in:text,number,select,subform,date,job_number,autocomplete',
             'fields.*.label' => 'required|string|max:255',
-            'fields.*.options' => 'array|required_if:fields.*.type,select',
+            'fields.*.options' => 'array|required_if:fields.*.type,select,autocomplete',
             'fields.*.subform_id' => 'required_if:fields.*.type,subform',
             'fields.*.options.*.value' => 'required_with:fields.*.options|string',
         ], [
             'fields.*.options.required_if' => 'กรุณาเพิ่มตัวเลือกในกรณีที่ประเภทของคำตอบเป็น ตัวเลือก',
             'fields.*.options.*.value.required_with' => 'กรุณาเพิ่มค่าในตัวเลือก',
             'fields.*.options.*.value.string' => 'ค่าของตัวเลือกต้องเป็นข้อความ',
-            'fields.*.type.in' => 'ประเภทของรายการต้องเป็น ข้อความ, ตัวเลข, วันที่, แบบฟอร์มย่อย หรือ ตัวเลือก เท่านั้น',
+            'fields.*.type.in' => 'ประเภทของรายการต้องเป็น ข้อความ, ตัวเลข, วันที่, แบบฟอร์มย่อย, ตัวเลือก, เลขที่งาน (Auto) หรือ ข้อความ+ตัวเลือก เท่านั้น',
             'fields.*.label.required' => 'กรุณาเพิ่มชื่อรายการ',
             'fields.*.label.string' => 'ชื่อรายการต้องเป็นข้อความ',
             'fields.required' => 'กรุณาเพิ่มรายการ',
@@ -237,7 +237,7 @@ class FormController extends Controller
 
                 $fieldIds[] = $fieldTarget->id;
 
-                if ($field['type'] === 'select') {
+                if (in_array($field['type'], ['select', 'autocomplete'])) {
                     foreach ($field['options'] ?? [] as $option) {
                         if (FieldOption::where('id', $option['id'])->exists()) {
                             $optionTarget = FieldOption::where('id', $option['id'])->first();
@@ -275,6 +275,62 @@ class FormController extends Controller
             return response()->json(['success'=> 'ลบแบบฟอร์มสำเร็จ']);
         } catch (\Throwable $th) {
             return response()->json(['error'=> "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"]);
+        }
+    }
+
+    public function duplicate(string $form_category, string $id)
+    {
+        try {
+            $originalForm = Form::with('formFields')->findOrFail($id);
+            $org_id = Auth()->user()->is_tsm ? session('connected_org') : Auth()->user()->userDetail->org;
+
+            $newForm = Form::create([
+                'form_id' => Str::uuid(),
+                'title' => $originalForm->title . ' (Copy)',
+                'category' => $originalForm->category,
+                'select_user' => $originalForm->select_user,
+                'select_vehicle' => $originalForm->select_vehicle,
+                'has_approve' => $originalForm->has_approve,
+                'org' => $org_id,
+                'created_by' => Auth::user()->id,
+                'status' => false,
+                'is_sub_form' => $originalForm->is_sub_form,
+                'is_default' => Auth::user()->username === 'tsmcadmin' ? true : false,
+            ]);
+
+            foreach ($originalForm->formFields as $field) {
+                $newField = FormField::create([
+                    'form_id' => $newForm->id,
+                    'label' => $field->label,
+                    'type' => $field->type,
+                    'subform_id' => $field->subform_id,
+                    'required' => $field->required,
+                    'order_number' => $field->order_number,
+                    'is_default' => $newForm->is_default,
+                ]);
+
+                foreach ($field->options as $option) {
+                    FieldOption::create([
+                        'field_id' => $newField->id,
+                        'value' => $option->value,
+                    ]);
+                }
+            }
+
+            foreach ($originalForm->hasPosition as $positionLink) {
+                PositionHasForm::create([
+                    'position_id' => $positionLink->position_id,
+                    'form_id' => $newForm->id,
+                ]);
+            }
+
+            return response()->json([
+                'success' => 'คัดลอกแบบฟอร์มสำเร็จ',
+                'form_id' => $newForm->form_id,
+            ]);
+        } catch (\Throwable $th) {
+            //throw $th;
+            return response()->json(['errors' => 'คัดลอกแบบฟอร์มไม่สำเร็จ'], 500);
         }
     }
 

@@ -56,6 +56,9 @@
                                                 <a href="{{ route('form.perm', ['form_id' => $form->form_id]) }}" class="btn btn-warning btn-sm" data-bs-toggle="tooltip" data-bs-title="กำหนดสิทธิ์">
                                                     <i class="bi bi-person-gear"></i>
                                                 </a>
+                                                <button type="button" class="btn btn-info btn-sm clone-form-btn" data-form-id="{{ $form->id }}" data-form-category="{{ $category_name }}" data-bs-toggle="tooltip" data-bs-title="คัดลอก">
+                                                    <i class="bi bi-files"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                     @endforeach
@@ -78,4 +81,44 @@
             background-color: var(--main-color);
         }
     </style>
+    <script>
+        document.querySelectorAll('.clone-form-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const formId = btn.getAttribute('data-form-id');
+                const formCategory = btn.getAttribute('data-form-category');
+
+                Swal.fire({
+                    title: 'คัดลอกแบบฟอร์มนี้?',
+                    text: 'ระบบจะสร้างแบบฟอร์มใหม่ที่มีรายการเหมือนกันทุกประการ (ปิดใช้งานไว้ก่อน แก้ไขได้ทันที)',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'คัดลอก',
+                    cancelButtonText: 'ยกเลิก',
+                }).then((result) => {
+                    if (!result.isConfirmed) return;
+
+                    fetch(`/forms/${formCategory}/duplicate/${formId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.errors) {
+                                Swal.fire('เกิดข้อผิดพลาด', data.errors, 'error');
+                            } else {
+                                Swal.fire(data.success, '', 'success').then(() => {
+                                    window.location.href = `/forms/${formCategory}/edit/${data.form_id}`;
+                                });
+                            }
+                        })
+                        .catch(() => {
+                            Swal.fire('เกิดข้อผิดพลาด', 'กรุณาลองใหม่อีกครั้ง', 'error');
+                        });
+                });
+            });
+        });
+    </script>
 @endsection

@@ -124,6 +124,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/forms/{form_category}/store', [FormController::class, 'store'])->name('form.store');
     Route::post('/forms/{form_category}/update/{form_id}', [FormController::class, 'update'])->name('form.update');
     Route::delete('/forms/{form_category}/form/{id}', [FormController::class, 'destroy'])->name('form.delete');
+    Route::post('/forms/{form_category}/duplicate/{id}', [FormController::class, 'duplicate'])->name('form.duplicate');
     Route::get('/forms/{form_id}/permission', [FormController::class, 'formPerm'])->name('form.perm');
     Route::get('/forms/set-permission', [FormController::class, 'formSetPerm'])->name('form.perm.set');
 
