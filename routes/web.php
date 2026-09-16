@@ -127,6 +127,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/forms/{form_category}/duplicate/{id}', [FormController::class, 'duplicate'])->name('form.duplicate');
     Route::get('/forms/{form_id}/permission', [FormController::class, 'formPerm'])->name('form.perm');
     Route::get('/forms/set-permission', [FormController::class, 'formSetPerm'])->name('form.perm.set');
+    Route::get('/forms/{form_id}/chain', [FormController::class, 'formChainEdit'])->name('form.chain.edit');
+    Route::post('/forms/{form_id}/chain-links', [FormController::class, 'storeFormChainLink'])->name('form.chain.links.store');
+    Route::delete('/forms/{form_id}/chain-links/{chainLink}', [FormController::class, 'destroyFormChainLink'])->name('form.chain.links.destroy');
+    Route::put('/forms/{form_id}/chain-links/{chainLink}/context', [FormController::class, 'updateFormChainContext'])->name('form.chain.context.update');
+    Route::put('/forms/{form_id}/chain-links/{chainLink}/maps/{targetField}', [FormController::class, 'updateFormChainMap'])->name('form.chain.maps.update');
 
     Route::get('/document/fill-out/select-form', [DocumentController::class, 'selectForm'])->name('document.fill-out.selectform');
     Route::get('/document/{form_id}/fill-out', [DocumentController::class, 'fillOutForm'])->name('document.fill-out');

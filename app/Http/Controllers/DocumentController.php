@@ -4,11 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Form;
 use App\Models\Form_category;
+use App\Models\FormChainLink;
 use App\Models\FormSubmissionHistory;
 use App\Models\FormSubmissions;
 use App\Models\FormSubmissionValue;
 use App\Models\User_detail;
 use App\Models\Vehicle;
+use App\Services\FormChainService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -16,6 +19,10 @@ use Illuminate\Support\Str;
 
 class DocumentController extends Controller
 {
+    public function __construct(private FormChainService $chainService)
+    {
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -34,16 +41,56 @@ class DocumentController extends Controller
     }
 
     public function fillOutForm($form_id) {
-        if (Auth()->user()->is_tsm) {
-            $org_id = session('connected_org') ?? '';
-        } else {
-            $org_id = Auth::user()->userDetail->org ?? '';
+        $org_id = $this->chainService->currentOrgId() ?? '';
+
+        $form_data = Form::where('form_id', $form_id)
+            ->where(function ($query) use ($org_id) {
+                $query->where('org', $org_id)->orWhere('is_default', true);
+            })
+            ->firstOrFail();
+        abort_unless($this->chainService->canFillForm($form_data), 403);
+
+        $prefilledValues = [];
+        $prefilledUserId = null;
+        $prefilledVehicleId = null;
+        $chainParentSubmission = null;
+
+        if ($requestParentId = request('from_submission')) {
+            $parentSubmission = FormSubmissions::where('submission_id', $requestParentId)->first();
+            $chainLink = $parentSubmission && $this->chainService->canAccessSubmission($parentSubmission)
+                ? FormChainLink::with(['fieldMaps.sourceField', 'fieldMaps.targetField'])
+                    ->where('source_form_id', $parentSubmission->form_id)
+                    ->where('next_form_id', $form_data->id)
+                    ->first()
+                : null;
+
+            if ($chainLink) {
+                $parentValues = FormSubmissionValue::where('submission_id', $parentSubmission->id)
+                    ->pluck('value', 'field_id');
+
+                foreach ($chainLink->fieldMaps as $map) {
+                    if ($map->sourceField && $map->targetField && $parentValues->has($map->source_field_id)) {
+                        $prefilledValues[$map->target_field_id] = $parentValues->get($map->source_field_id);
+                    }
+                }
+
+                $prefilledUserId = $chainLink->copy_selected_user ? $parentSubmission->user_id : null;
+                $prefilledVehicleId = $chainLink->copy_selected_vehicle ? $parentSubmission->vehicle_id : null;
+                $chainParentSubmission = $parentSubmission->submission_id;
+            }
         }
 
-        $form_data = Form::where('form_id', $form_id)->firstOrFail();
         $users = User_detail::where('org', $org_id)->get(['user_id', 'fname', 'lname']);
         $vehicles = Vehicle::where('org_id', $org_id)->get(['id', 'license_plate', 'brand']);
-        return view('form.checking.fillOutForm', compact('form_data', 'users', 'vehicles'));
+        return view('form.checking.fillOutForm', compact(
+            'form_data',
+            'users',
+            'vehicles',
+            'prefilledValues',
+            'prefilledUserId',
+            'prefilledVehicleId',
+            'chainParentSubmission'
+        ));
     }
 
     /**
@@ -63,6 +110,7 @@ class DocumentController extends Controller
             'selected_user_id' => 'nullable|exists:users,id',
             'selected_vehicle_id' => 'nullable|exists:vehicles,id',
             'fieldsAns' => 'required|array',
+            'chain_parent_submission' => 'nullable|uuid',
         ]);
 
         if ($validator->fails()) {
@@ -71,16 +119,27 @@ class DocumentController extends Controller
 
         try {
             $form = Form::where('form_id', $form_id)->firstOrFail();
+            $parentSubmission = null;
 
-            if (Auth()->user()->is_tsm) {
-                $org_id = session('connected_org') ?? null;
-            } else {
-                $org_id = Auth::user()->userDetail->org ?? null;
+            if ($request->filled('chain_parent_submission')) {
+                $parentSubmission = FormSubmissions::where('submission_id', $request->chain_parent_submission)->first();
+                $hasChainLink = $parentSubmission && $this->chainService->canAccessSubmission($parentSubmission)
+                    && $this->chainService->canFillForm($form)
+                    && FormChainLink::where('source_form_id', $parentSubmission->form_id)
+                        ->where('next_form_id', $form->id)
+                        ->exists();
+
+                if (!$hasChainLink) {
+                    return response()->json(['errors' => 'ไม่สามารถเชื่อมแบบฟอร์มนี้ได้'], 422);
+                }
             }
+
+            $org_id = $this->chainService->currentOrgId();
 
             $form_submission = FormSubmissions::create([
                 'submission_id' => Str::uuid(),
                 'form_id' => $form->id,
+                'parent_submission_id' => $parentSubmission?->id,
                 'user_id' => $request->selected_user_id ?? null,
                 'vehicle_id' => $request->selected_vehicle_id ?? null,
                 'submitted_by' => Auth::user()->id,
@@ -102,6 +161,12 @@ class DocumentController extends Controller
             ]);
 
             return response()->json(['success' => 'ส่งแบบฟอร์มสำเร็จ!']);
+        } catch (QueryException $e) {
+            if ($e->getCode() === '23000' && str_contains($e->getMessage(), 'parent_submission_id')) {
+                return response()->json(['errors' => 'มีแบบฟอร์มต่อเนื่องนี้แล้ว'], 422);
+            }
+
+            return response()->json(['errors' => 'เกิดข้อผิดพลาดขณะบันทึกแบบฟอร์ม']);
         } catch (\Throwable $th) {
             //throw $th;
             return response()->json(['errors' => 'เกิดข้อผิดพลาดขณะบันทึกแบบฟอร์ม']);
@@ -114,9 +179,11 @@ class DocumentController extends Controller
     public function show(string $id)
     {
         $submission = FormSubmissions::where('submission_id', $id)->firstOrFail();
+        abort_unless($this->chainService->canAccessSubmission($submission), 403);
         $form_data = Form::where('id', $submission->form_id)->firstOrFail();
         $is_show = true;
-        return view('form.checking.continueDocument', compact('submission', 'form_data', 'is_show'));
+        $chainActions = $this->chainActionsFor($submission);
+        return view('form.checking.continueDocument', compact('submission', 'form_data', 'is_show', 'chainActions'));
     }
 
     /**
@@ -125,9 +192,11 @@ class DocumentController extends Controller
     public function edit(string $id)
     {
         $submission = FormSubmissions::where('submission_id', $id)->firstOrFail();
+        abort_unless($this->chainService->canAccessSubmission($submission), 403);
         $form_data = Form::where('id', $submission->form_id)->firstOrFail();
         $is_show = false;
-        return view('form.checking.continueDocument', compact('submission', 'form_data', 'is_show'));
+        $chainActions = [];
+        return view('form.checking.continueDocument', compact('submission', 'form_data', 'is_show', 'chainActions'));
     }
 
     /**
@@ -204,5 +273,36 @@ class DocumentController extends Controller
         }
 
         return view('exportDocument.filterData', compact('form_cates', 'vehicles', 'users'));
+    }
+
+    private function chainActionsFor(FormSubmissions $submission): array
+    {
+        $actions = [];
+        $links = FormChainLink::with('nextForm')
+            ->where('source_form_id', $submission->form_id)
+            ->get();
+
+        foreach ($links as $link) {
+            $nextForm = $link->nextForm;
+            if (!$nextForm || !$nextForm->status || !$this->chainService->canFillForm($nextForm)) {
+                continue;
+            }
+
+            $child = FormSubmissions::where('parent_submission_id', $submission->id)
+                ->where('form_id', $nextForm->id)
+                ->first();
+
+            if ($child && !$this->chainService->canAccessSubmission($child)) {
+                continue;
+            }
+
+            $actions[] = [
+                'title' => $nextForm->title,
+                'submission_id' => $child?->submission_id,
+                'form_id' => $nextForm->form_id,
+            ];
+        }
+
+        return $actions;
     }
 }

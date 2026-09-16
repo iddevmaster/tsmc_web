@@ -12,6 +12,7 @@ class FormSubmissions extends Model
     protected $fillable = [
         'submission_id',
         'form_id',
+        'parent_submission_id',
         'user_id',
         'vehicle_id',
         'submitted_by',
@@ -44,6 +45,16 @@ class FormSubmissions extends Model
     public function getSubmissionHistory()
     {
         return $this->hasMany(FormSubmissionHistory::class, 'submission_id')->orderByDesc('created_at')->limit(10);
+    }
+
+    public function parentSubmission()
+    {
+        return $this->belongsTo(self::class, 'parent_submission_id');
+    }
+
+    public function childSubmissions()
+    {
+        return $this->hasMany(self::class, 'parent_submission_id');
     }
 
     public function getSubmissionValuesIsNull()

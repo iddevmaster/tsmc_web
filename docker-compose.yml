@@ -1,0 +1,29 @@
+# Shared local-dev MySQL, used by multiple projects on this machine (not just tsmc_web).
+# Laragon's own MySQL is unavailable on this machine, so every local PHP project connects
+# here at 127.0.0.1:3306 instead. Reuses e-sub_tracking's existing data volume so that
+# project's data survives the move from its own standalone mysql container.
+#
+# Native/host-run apps (like this one) connect via 127.0.0.1:3306.
+# Dockerized apps (like e-sub_tracking's `app` container) connect via host.docker.internal:3306.
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: shared-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - esub_mysql_data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  esub_mysql_data:
+    external: true
+    name: e-sub_tracking_esub_mysql_data

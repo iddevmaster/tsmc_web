@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\FieldOption;
 use App\Models\Form;
 use App\Models\Form_category;
+use App\Models\FormChainLink;
 use App\Models\FormField;
+use App\Models\FormFieldChainMap;
 use App\Models\Position;
 use App\Models\PositionHasForm;
+use App\Services\FormChainService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -15,6 +18,10 @@ use Illuminate\Support\Str;
 
 class FormController extends Controller
 {
+    public function __construct(private FormChainService $chainService)
+    {
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -358,5 +365,150 @@ class FormController extends Controller
             //throw $th;
             return response()->json(['errors' => 'บันทึกข้อมูลไม่สำเร็จ'], 500);
         }
+    }
+
+    public function formChainEdit(string $form_id)
+    {
+        $form_data = $this->chainForm($form_id);
+        $sourceFields = $this->chainService->answerableFields($form_data);
+        $linkedFormIds = $form_data->nextChainLinks()->pluck('next_form_id');
+
+        $candidateQuery = Form::where('is_sub_form', false)
+            ->whereNotIn('id', $linkedFormIds)
+            ->where('id', '!=', $form_data->id);
+
+        if ($form_data->is_default) {
+            $candidateQuery->where('is_default', true);
+        } else {
+            $candidateQuery->where(function ($query) {
+                $query->where('org', $this->chainService->currentOrgId())->orWhere('is_default', true);
+            });
+        }
+
+        $candidates = $candidateQuery->orderBy('title')->get()
+            ->reject(fn (Form $form) => $this->chainService->wouldCreateChainCycle($form_data->id, $form->id));
+
+        $chainLinks = $form_data->nextChainLinks()
+            ->with(['nextForm', 'fieldMaps'])
+            ->get();
+
+        foreach ($chainLinks as $chainLink) {
+            $chainLink->targetFields = $chainLink->nextForm
+                ? $this->chainService->answerableFields($chainLink->nextForm)
+                : collect();
+        }
+
+        return view('form.formChain', compact('form_data', 'sourceFields', 'candidates', 'chainLinks'));
+    }
+
+    public function storeFormChainLink(Request $request, string $form_id)
+    {
+        $request->validate(['next_form_id' => ['required', 'integer']]);
+
+        $sourceForm = $this->chainForm($form_id);
+        $nextForm = $this->chainCandidate($sourceForm, (int) $request->next_form_id);
+
+        if (!$nextForm || $this->chainService->wouldCreateChainCycle($sourceForm->id, $nextForm->id)) {
+            return response()->json(['errors' => 'ไม่สามารถเชื่อมแบบฟอร์มนี้ได้'], 422);
+        }
+
+        try {
+            FormChainLink::create([
+                'source_form_id' => $sourceForm->id,
+                'next_form_id' => $nextForm->id,
+            ]);
+
+            return response()->json(['success' => 'เพิ่มฟอร์มต่อเนื่องสำเร็จ']);
+        } catch (\Throwable $th) {
+            return response()->json(['errors' => 'เพิ่มฟอร์มต่อเนื่องไม่สำเร็จ'], 422);
+        }
+    }
+
+    public function destroyFormChainLink(string $form_id, int $chainLink)
+    {
+        $sourceForm = $this->chainForm($form_id);
+        $link = $sourceForm->nextChainLinks()->findOrFail($chainLink);
+        $link->delete();
+
+        return response()->json(['success' => 'ลบฟอร์มต่อเนื่องสำเร็จ']);
+    }
+
+    public function updateFormChainContext(Request $request, string $form_id, int $chainLink)
+    {
+        $request->validate([
+            'copy_selected_user' => ['required', 'boolean'],
+            'copy_selected_vehicle' => ['required', 'boolean'],
+        ]);
+
+        $sourceForm = $this->chainForm($form_id);
+        $link = $sourceForm->nextChainLinks()->with('nextForm')->findOrFail($chainLink);
+
+        $link->update([
+            'copy_selected_user' => $sourceForm->select_user && $link->nextForm?->select_user
+                ? $request->boolean('copy_selected_user') : false,
+            'copy_selected_vehicle' => $sourceForm->select_vehicle && $link->nextForm?->select_vehicle
+                ? $request->boolean('copy_selected_vehicle') : false,
+        ]);
+
+        return response()->json(['success' => 'บันทึกข้อมูลสำเร็จ']);
+    }
+
+    public function updateFormChainMap(Request $request, string $form_id, int $chainLink, int $targetField)
+    {
+        $request->validate(['source_field_id' => ['nullable', 'integer']]);
+
+        $sourceForm = $this->chainForm($form_id);
+        $link = $sourceForm->nextChainLinks()->with('nextForm')->findOrFail($chainLink);
+        $sourceFields = $this->chainService->answerableFields($sourceForm)->keyBy('id');
+        $targetFields = $link->nextForm ? $this->chainService->answerableFields($link->nextForm)->keyBy('id') : collect();
+
+        if (!$targetFields->has($targetField)) {
+            return response()->json(['errors' => 'รายการปลายทางไม่ถูกต้อง'], 422);
+        }
+
+        $sourceFieldId = $request->input('source_field_id');
+        if (!$sourceFieldId) {
+            FormFieldChainMap::where('chain_link_id', $link->id)
+                ->where('target_field_id', $targetField)
+                ->delete();
+
+            return response()->json(['success' => 'บันทึกข้อมูลสำเร็จ']);
+        }
+
+        if (!$sourceFields->has($sourceFieldId)) {
+            return response()->json(['errors' => 'รายการต้นทางไม่ถูกต้อง'], 422);
+        }
+
+        FormFieldChainMap::updateOrCreate(
+            ['chain_link_id' => $link->id, 'target_field_id' => $targetField],
+            ['source_field_id' => $sourceFieldId]
+        );
+
+        return response()->json(['success' => 'บันทึกข้อมูลสำเร็จ']);
+    }
+
+    private function chainForm(string $formId): Form
+    {
+        return Form::where('form_id', $formId)
+            ->where('is_sub_form', false)
+            ->where(function ($query) {
+                $query->where('org', $this->chainService->currentOrgId())->orWhere('is_default', true);
+            })
+            ->firstOrFail();
+    }
+
+    private function chainCandidate(Form $sourceForm, int $nextFormId): ?Form
+    {
+        $query = Form::where('id', $nextFormId)->where('is_sub_form', false);
+
+        if ($sourceForm->is_default) {
+            $query->where('is_default', true);
+        } else {
+            $query->where(function ($candidateQuery) {
+                $candidateQuery->where('org', $this->chainService->currentOrgId())->orWhere('is_default', true);
+            });
+        }
+
+        return $query->first();
     }
 }

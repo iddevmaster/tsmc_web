@@ -5,7 +5,7 @@
         <div class="row justify-content-center">
             <div class="px-3 px-md-5">
                 <div class="card">
-                    <div class="card-body px-md-5" x-data="formFillOut({{ $form_data->formFields }}, {{ $vehicles }}, '{{ $form_data->form_id }}')">
+                    <div class="card-body px-md-5" x-data="formFillOut({{ $form_data->formFields }}, {{ $vehicles }}, '{{ $form_data->form_id }}', @json($prefilledValues), @json($prefilledUserId), @json($prefilledVehicleId), @json($chainParentSubmission))">
                         <p class="text-center fs-5 fw-bold">{{ $form_data->title }}</p>
                         <form @submit.prevent="handleSubmit">
                             @csrf
@@ -191,7 +191,7 @@
         </div>
     </div>
     <script>
-        function formFillOut(fieldData, vehicles, formId) {
+        function formFillOut(fieldData, vehicles, formId, prefilledValues = {}, prefilledUserId = null, prefilledVehicleId = null, chainParentSubmission = null) {
             return {
                 formFieldsAnswer: fieldData.map((field) => ({
                     id: field.id,
@@ -207,18 +207,23 @@
                         options: subfield.options ? subfield.options.map(option => ({
                             value: option.value
                         })) : '',
-                        answer: ''
+                        answer: Object.prototype.hasOwnProperty.call(prefilledValues, subfield.id) ? prefilledValues[subfield.id] : ''
                     })) : '',
-                    answer: field.type === 'job_number' ? (field.job_number_default || '') : ''
+                    answer: Object.prototype.hasOwnProperty.call(prefilledValues, field.id)
+                        ? prefilledValues[field.id]
+                        : (field.type === 'job_number' ? (field.job_number_default || '') : '')
                 })),
-                selectUserId: '',
-                selectVehicleId: '',
+                selectUserId: prefilledUserId || '',
+                selectVehicleId: prefilledVehicleId || '',
+                chainParentSubmission,
                 showVehicleError: false,
                 showUserError: false,
                 storageKey: `form_history_${formId}`,
 
                 init() {
-                    this.restoreHistory();
+                    if (!this.chainParentSubmission) {
+                        this.restoreHistory();
+                    }
                 },
 
                 // บันทึก history ลง LocalStorage
@@ -295,7 +300,8 @@
                     const formData = {
                         selected_user_id: this.selectUserId,
                         selected_vehicle_id: this.selectVehicleId,
-                        fieldsAns: fieldsWithAns
+                        fieldsAns: fieldsWithAns,
+                        chain_parent_submission: this.chainParentSubmission,
                     };
 
                     fetch(`/document/{{ $form_data->form_id }}/submit`, {

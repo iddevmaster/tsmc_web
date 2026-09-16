@@ -54,6 +54,16 @@ class Form extends Model
         return $this->hasPosition()->where('position_id', $positionId)->exists();
     }
 
+    public function nextChainLinks()
+    {
+        return $this->hasMany(FormChainLink::class, 'source_form_id');
+    }
+
+    public function previousChainLinks()
+    {
+        return $this->hasMany(FormChainLink::class, 'next_form_id');
+    }
+
     public function countFromSubmissionByQuarter($quarter, $form_id)
     {
         $quarter_start_date = now()->startOfYear()->addMonths(($quarter - 1) * 3);

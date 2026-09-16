@@ -56,6 +56,9 @@
                                                 <a href="{{ route('form.perm', ['form_id' => $form->form_id]) }}" class="btn btn-warning btn-sm" data-bs-toggle="tooltip" data-bs-title="กำหนดสิทธิ์">
                                                     <i class="bi bi-person-gear"></i>
                                                 </a>
+                                                <a href="{{ route('form.chain.edit', ['form_id' => $form->form_id]) }}" class="btn btn-secondary btn-sm" data-bs-toggle="tooltip" data-bs-title="จัดการฟอร์มต่อเนื่อง">
+                                                    <i class="bi bi-diagram-3"></i>
+                                                </a>
                                                 <button type="button" class="btn btn-info btn-sm clone-form-btn" data-form-id="{{ $form->id }}" data-form-category="{{ $category_name }}" data-bs-toggle="tooltip" data-bs-title="คัดลอก">
                                                     <i class="bi bi-files"></i>
                                                 </button>
