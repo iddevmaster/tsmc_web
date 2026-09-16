@@ -20,11 +20,11 @@ class FormField extends Model
         'is_default'
     ];
 
-    protected $appends = ['options', 'subform'];
+    protected $appends = ['options', 'subform', 'job_number_default'];
 
     public function getOptionsAttribute()
     {
-        if ($this->type == 'select') {
+        if (in_array($this->type, ['select', 'autocomplete'])) {
             return FieldOption::where('field_id', $this->id)->get();
         }
         return [];
@@ -36,6 +36,24 @@ class FormField extends Model
             return Form::where('id', $this->subform_id)->first(['id', 'is_sub_form']);
         }
         return null;
+    }
+
+    public function getJobNumberDefaultAttribute()
+    {
+        if ($this->type !== 'job_number') {
+            return null;
+        }
+
+        $prefix = now()->year . '-';
+
+        $lastValue = FormSubmissionValue::where('field_id', $this->id)
+            ->where('value', 'like', $prefix . '%')
+            ->orderByDesc('value')
+            ->value('value');
+
+        $lastSeq = $lastValue ? (int) substr($lastValue, strlen($prefix)) : 0;
+
+        return $prefix . str_pad($lastSeq + 1, 4, '0', STR_PAD_LEFT);
     }
 
 }

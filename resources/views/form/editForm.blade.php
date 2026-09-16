@@ -64,12 +64,15 @@
                                     <option value="text" :selected="field.type === 'text'">ข้อความ</option>
                                     <option value="number" :selected="field.type === 'number'">ตัวเลข</option>
                                     <option value="select" :selected="field.type === 'select'">ตัวเลือก</option>
+                                    <option value="autocomplete" :selected="field.type === 'autocomplete'">ข้อความ + ตัวเลือก (Autocomplete)</option>
+                                    <option value="date" :selected="field.type === 'date'">วันที่</option>
+                                    <option value="job_number" :selected="field.type === 'job_number'">เลขที่งาน (Auto)</option>
                                     <option value="subform" :selected="field.type === 'subform'">แบบฟอร์มย่อย</option>
                                 </select>
                             </div>
 
                             {{-- Select Options --}}
-                            <template x-if="field.type === 'select'">
+                            <template x-if="field.type === 'select' || field.type === 'autocomplete'">
                                 <div class="col-12">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <label class="form-label mb-0">ตัวเลือก</label>
@@ -156,6 +159,18 @@
                     {
                         value: 'select',
                         label: 'ตัวเลือก'
+                    },
+                    {
+                        value: 'autocomplete',
+                        label: 'ข้อความ + ตัวเลือก (Autocomplete)'
+                    },
+                    {
+                        value: 'date',
+                        label: 'วันที่'
+                    },
+                    {
+                        value: 'job_number',
+                        label: 'เลขที่งาน (Auto)'
                     },
                     {
                         value: 'subform',

@@ -129,7 +129,7 @@
                                             <div x-text="field.answer" class="text-decoration-underline"></div>
                                         @else
                                             <!-- Input Type: Text -->
-                                            <template x-if="field.type === 'text'">
+                                            <template x-if="field.type === 'text' || field.type === 'job_number'">
                                                 <input type="text" class="form-control ms-2" x-model="field.answer">
                                             </template>
 
@@ -146,6 +146,17 @@
                                                         <option :value="option.value" x-text="option.value" :selected="option.value === field.answer"></option>
                                                     </template>
                                                 </select>
+                                            </template>
+
+                                            <template x-if="field.type === 'autocomplete'">
+                                                <div>
+                                                    <input type="text" class="form-control ms-2" x-model="field.answer" :list="'dl-' + field.id">
+                                                    <datalist :id="'dl-' + field.id">
+                                                        <template x-for="option in field.options" :key="option.value">
+                                                            <option :value="option.value"></option>
+                                                        </template>
+                                                    </datalist>
+                                                </div>
                                             </template>
                                         @endif
                                     </div>

@@ -139,6 +139,11 @@
                                                 <input type="text" class="form-control ms-2" x-model="field.answer" placeholder="กรอกข้อมูล">
                                             </template>
 
+                                            <!-- Input Type: Job Number (Auto) -->
+                                            <template x-if="field.type === 'job_number'">
+                                                <input type="text" class="form-control ms-2" x-model="field.answer" placeholder="ระบบสร้างเลขที่งานให้อัตโนมัติ แก้ไขได้">
+                                            </template>
+
                                             <!-- Input Type: Date -->
                                             <template x-if="field.type === 'date'">
                                                 <input type="date" class="form-control ms-2" x-model="field.answer" placeholder="เลือกวันที่">
@@ -157,6 +162,18 @@
                                                         <option :value="option.value" x-text="option.value"></option>
                                                     </template>
                                                 </select>
+                                            </template>
+
+                                            <!-- Input Type: Autocomplete (Text + Options) -->
+                                            <template x-if="field.type === 'autocomplete'">
+                                                <div>
+                                                    <input type="text" class="form-control ms-2" x-model="field.answer" :list="'dl-' + field.id" placeholder="กรอกหรือเลือกคำตอบ">
+                                                    <datalist :id="'dl-' + field.id">
+                                                        <template x-for="option in field.options" :key="option.value">
+                                                            <option :value="option.value"></option>
+                                                        </template>
+                                                    </datalist>
+                                                </div>
                                             </template>
                                         </div>
                                     </div>
@@ -192,7 +209,7 @@
                         })) : '',
                         answer: ''
                     })) : '',
-                    answer: ''
+                    answer: field.type === 'job_number' ? (field.job_number_default || '') : ''
                 })),
                 selectUserId: '',
                 selectVehicleId: '',

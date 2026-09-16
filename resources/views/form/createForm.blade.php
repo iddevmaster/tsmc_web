@@ -65,7 +65,7 @@
                             </div>
 
                             {{-- Select Options --}}
-                            <template x-if="field.type === 'select'">
+                            <template x-if="field.type === 'select' || field.type === 'autocomplete'">
                                 <div class="col-12">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <label class="form-label mb-0">ตัวเลือก</label>
@@ -149,8 +149,16 @@
                         label: 'ตัวเลือก'
                     },
                     {
+                        value: 'autocomplete',
+                        label: 'ข้อความ + ตัวเลือก (Autocomplete)'
+                    },
+                    {
                         value: 'date',
                         label: 'วันที่'
+                    },
+                    {
+                        value: 'job_number',
+                        label: 'เลขที่งาน (Auto)'
                     },
                     {
                         value: 'subform',
