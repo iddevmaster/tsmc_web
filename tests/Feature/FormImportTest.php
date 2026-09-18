@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\FormSubmissions;
+use App\Models\FormSubmissionValue;
+use App\Models\Vehicle;
 use App\Services\FormImportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -160,5 +162,176 @@ class FormImportTest extends TestCase
 
         $this->actingAs($user);
         $this->assertCount(0, app(FormImportService::class)->candidatesForToday($targetForm));
+    }
+
+    public function test_matched_values_returns_values_for_matched_label_and_type_pairs(): void
+    {
+        $org = $this->makeOrg();
+        $sourceForm = $this->makeForm($org, ['select_user' => false]);
+        $targetForm = $this->makeForm($org, ['select_user' => false]);
+        $sourceField = $this->makeField($sourceForm, 'ทะเบียนรถ');
+        $targetField = $this->makeField($targetForm, 'ทะเบียนรถ');
+        $user = $this->makeOrgUser($org, [$sourceForm->id, $targetForm->id]);
+        $source = FormSubmissions::create([
+            'submission_id' => Str::uuid(),
+            'form_id' => $sourceForm->id,
+            'submitted_by' => $user->id,
+            'org' => (string) $org->id,
+        ]);
+        FormSubmissionValue::create([
+            'submission_id' => $source->id,
+            'field_id' => $sourceField->id,
+            'value' => 'กข-1234',
+            'submitted_by' => $user->id,
+        ]);
+
+        $this->actingAs($user);
+        $result = app(FormImportService::class)->matchedValues($source, $targetForm);
+
+        $this->assertSame('กข-1234', $result['values'][$targetField->id]);
+    }
+
+    public function test_matched_values_skips_a_field_whose_label_or_type_does_not_match(): void
+    {
+        $org = $this->makeOrg();
+        $sourceForm = $this->makeForm($org, ['select_user' => false]);
+        $targetForm = $this->makeForm($org, ['select_user' => false]);
+        $sourceField = $this->makeField($sourceForm, 'จำนวน', 'number');
+        $sameLabelDifferentType = $this->makeField($targetForm, 'จำนวน', 'text');
+        $differentLabel = $this->makeField($targetForm, 'คนละชื่อ', 'number', 1);
+        $user = $this->makeOrgUser($org, [$sourceForm->id, $targetForm->id]);
+        $source = FormSubmissions::create([
+            'submission_id' => Str::uuid(),
+            'form_id' => $sourceForm->id,
+            'submitted_by' => $user->id,
+            'org' => (string) $org->id,
+        ]);
+        FormSubmissionValue::create([
+            'submission_id' => $source->id,
+            'field_id' => $sourceField->id,
+            'value' => '5',
+            'submitted_by' => $user->id,
+        ]);
+
+        $this->actingAs($user);
+        $result = app(FormImportService::class)->matchedValues($source, $targetForm);
+
+        $this->assertArrayNotHasKey($sameLabelDifferentType->id, $result['values']);
+        $this->assertArrayNotHasKey($differentLabel->id, $result['values']);
+    }
+
+    public function test_matched_values_skips_an_empty_source_value(): void
+    {
+        $org = $this->makeOrg();
+        $sourceForm = $this->makeForm($org, ['select_user' => false]);
+        $targetForm = $this->makeForm($org, ['select_user' => false]);
+        $sourceField = $this->makeField($sourceForm, 'หมายเหตุ');
+        $targetField = $this->makeField($targetForm, 'หมายเหตุ');
+        $user = $this->makeOrgUser($org, [$sourceForm->id, $targetForm->id]);
+        $source = FormSubmissions::create([
+            'submission_id' => Str::uuid(),
+            'form_id' => $sourceForm->id,
+            'submitted_by' => $user->id,
+            'org' => (string) $org->id,
+        ]);
+        FormSubmissionValue::create([
+            'submission_id' => $source->id,
+            'field_id' => $sourceField->id,
+            'value' => '',
+            'submitted_by' => $user->id,
+        ]);
+
+        $this->actingAs($user);
+        $result = app(FormImportService::class)->matchedValues($source, $targetForm);
+
+        $this->assertArrayNotHasKey($targetField->id, $result['values']);
+    }
+
+    public function test_matched_values_includes_user_and_vehicle_when_both_forms_support_them(): void
+    {
+        $org = $this->makeOrg();
+        $vehicle = Vehicle::create([
+            'license_plate' => 'กข-1234',
+            'brand' => 'Toyota',
+            'org_id' => $org->id,
+        ]);
+        $sourceForm = $this->makeForm($org, ['select_user' => true, 'select_vehicle' => true]);
+        $targetForm = $this->makeForm($org, ['select_user' => true, 'select_vehicle' => true]);
+        $user = $this->makeOrgUser($org, [$sourceForm->id, $targetForm->id]);
+        $source = FormSubmissions::create([
+            'submission_id' => Str::uuid(),
+            'form_id' => $sourceForm->id,
+            'user_id' => $user->id,
+            'vehicle_id' => $vehicle->id,
+            'submitted_by' => $user->id,
+            'org' => (string) $org->id,
+        ]);
+
+        $this->actingAs($user);
+        $result = app(FormImportService::class)->matchedValues($source, $targetForm);
+
+        $this->assertSame($user->id, $result['user_id']);
+        $this->assertSame($vehicle->id, $result['vehicle_id']);
+    }
+
+    public function test_matched_values_excludes_user_and_vehicle_when_target_does_not_support_them(): void
+    {
+        $org = $this->makeOrg();
+        $vehicle = Vehicle::create([
+            'license_plate' => 'กข-1234',
+            'brand' => 'Toyota',
+            'org_id' => $org->id,
+        ]);
+        $sourceForm = $this->makeForm($org, ['select_user' => true, 'select_vehicle' => true]);
+        $targetForm = $this->makeForm($org, ['select_user' => false, 'select_vehicle' => false]);
+        $user = $this->makeOrgUser($org, [$sourceForm->id, $targetForm->id]);
+        $source = FormSubmissions::create([
+            'submission_id' => Str::uuid(),
+            'form_id' => $sourceForm->id,
+            'user_id' => $user->id,
+            'vehicle_id' => $vehicle->id,
+            'submitted_by' => $user->id,
+            'org' => (string) $org->id,
+        ]);
+
+        $this->actingAs($user);
+        $result = app(FormImportService::class)->matchedValues($source, $targetForm);
+
+        $this->assertNull($result['user_id']);
+        $this->assertNull($result['vehicle_id']);
+    }
+
+    public function test_matched_values_picks_the_lowest_order_number_when_source_has_duplicate_labels(): void
+    {
+        $org = $this->makeOrg();
+        $sourceForm = $this->makeForm($org, ['select_user' => false]);
+        $targetForm = $this->makeForm($org, ['select_user' => false]);
+        $firstSourceField = $this->makeField($sourceForm, 'หมายเหตุ', 'text', 0);
+        $secondSourceField = $this->makeField($sourceForm, 'หมายเหตุ', 'text', 1);
+        $targetField = $this->makeField($targetForm, 'หมายเหตุ');
+        $user = $this->makeOrgUser($org, [$sourceForm->id, $targetForm->id]);
+        $source = FormSubmissions::create([
+            'submission_id' => Str::uuid(),
+            'form_id' => $sourceForm->id,
+            'submitted_by' => $user->id,
+            'org' => (string) $org->id,
+        ]);
+        FormSubmissionValue::create([
+            'submission_id' => $source->id,
+            'field_id' => $firstSourceField->id,
+            'value' => 'ค่าจากช่องแรก',
+            'submitted_by' => $user->id,
+        ]);
+        FormSubmissionValue::create([
+            'submission_id' => $source->id,
+            'field_id' => $secondSourceField->id,
+            'value' => 'ค่าจากช่องที่สอง',
+            'submitted_by' => $user->id,
+        ]);
+
+        $this->actingAs($user);
+        $result = app(FormImportService::class)->matchedValues($source, $targetForm);
+
+        $this->assertSame('ค่าจากช่องแรก', $result['values'][$targetField->id]);
     }
 }

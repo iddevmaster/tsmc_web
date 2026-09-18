@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Form;
 use App\Models\FormField;
 use App\Models\FormSubmissions;
+use App\Models\FormSubmissionValue;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
@@ -66,6 +67,47 @@ class FormImportService
         }
 
         return $candidates->values();
+    }
+
+    public function matchedValues(FormSubmissions $source, Form $targetForm): array
+    {
+        $sourceForm = Form::find($source->form_id);
+        if (!$sourceForm || $sourceForm->id === $targetForm->id) {
+            return ['values' => [], 'user_id' => null, 'vehicle_id' => null];
+        }
+
+        $targetFields = $this->chainService->answerableFields($targetForm);
+        $sourceFields = $this->chainService->answerableFields($sourceForm)
+            ->sortBy(fn (FormField $field) => [$field->order_number, $field->id])
+            ->values();
+        $sourceValues = FormSubmissionValue::where('submission_id', $source->id)
+            ->pluck('value', 'field_id');
+
+        $values = [];
+        foreach ($targetFields as $targetField) {
+            $match = $sourceFields->first(
+                fn (FormField $sourceField) => trim($sourceField->label) === trim($targetField->label)
+                    && $sourceField->type === $targetField->type
+            );
+
+            if (!$match) {
+                continue;
+            }
+
+            $value = $sourceValues->get($match->id);
+            if ($value !== null && $value !== '') {
+                $values[$targetField->id] = $value;
+            }
+        }
+
+        $userId = ($targetForm->select_user && $sourceForm->select_user && $source->user_id)
+            ? $source->user_id
+            : null;
+        $vehicleId = ($targetForm->select_vehicle && $sourceForm->select_vehicle && $source->vehicle_id)
+            ? $source->vehicle_id
+            : null;
+
+        return ['values' => $values, 'user_id' => $userId, 'vehicle_id' => $vehicleId];
     }
 
     private function fieldSignatures(Collection $fields): Collection
