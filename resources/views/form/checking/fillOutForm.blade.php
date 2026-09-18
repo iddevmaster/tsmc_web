@@ -6,7 +6,12 @@
             <div class="px-3 px-md-5">
                 <div class="card">
                     <div class="card-body px-md-5" x-data="formFillOut({{ $form_data->formFields }}, {{ $vehicles }}, '{{ $form_data->form_id }}', @json($prefilledValues), @json($prefilledUserId), @json($prefilledVehicleId), @json($chainParentSubmission))">
-                        <p class="text-center fs-5 fw-bold">{{ $form_data->title }}</p>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <p class="fs-5 fw-bold mb-0">{{ $form_data->title }}</p>
+                            <button type="button" class="btn btn-outline-primary btn-sm" @click="openImportPicker()">
+                                <i class="bi bi-download"></i> นำเข้าข้อมูลจากฟอร์มอื่น (วันนี้)
+                            </button>
+                        </div>
                         <form @submit.prevent="handleSubmit">
                             @csrf
 
@@ -272,6 +277,100 @@
                     let selectedVehicle = vehicles.find(v => v.id == this.selectVehicleId);
                     this.selectUserId = selectedVehicle ? selectedVehicle.driver_id : '';
                     this.updateError();
+                },
+
+                async openImportPicker() {
+                    const response = await fetch(`/document/{{ $form_data->form_id }}/import-candidates`, {
+                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+                    });
+                    const data = await response.json();
+                    const candidates = data.candidates || [];
+
+                    if (candidates.length === 0) {
+                        Swal.fire({ icon: 'info', title: 'ไม่มีใบที่นำเข้าได้วันนี้', confirmButtonText: 'ตกลง' });
+                        return;
+                    }
+
+                    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#039;'
+                    }[character]));
+                    const options = candidates.map((candidate) => {
+                        const who = escapeHtml(candidate.employee_name || candidate.submitted_by_name || '');
+                        const vehicle = candidate.vehicle_label ? ` - ${escapeHtml(candidate.vehicle_label)}` : '';
+                        const person = who ? ` - ${who}` : '';
+                        return `<option value="${escapeHtml(candidate.submission_id)}">${escapeHtml(candidate.form_title)} (${escapeHtml(candidate.submitted_at)})${person}${vehicle}</option>`;
+                    }).join('');
+
+                    const { value: submissionId } = await Swal.fire({
+                        title: 'เลือกใบที่จะนำเข้าข้อมูล',
+                        html: `<select id="import-source-select" class="form-select">${options}</select>`,
+                        showCancelButton: true,
+                        confirmButtonText: 'นำเข้า',
+                        cancelButtonText: 'ยกเลิก',
+                        preConfirm: () => document.getElementById('import-source-select').value,
+                    });
+
+                    if (submissionId) {
+                        await this.applyImport(submissionId);
+                    }
+                },
+
+                async applyImport(submissionId) {
+                    const response = await fetch(`/document/import-data/${submissionId}?target_form_id={{ $form_data->form_id }}`, {
+                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+                    });
+                    const data = await response.json();
+
+                    if (data.errors) {
+                        Swal.fire({ icon: 'error', title: data.errors, confirmButtonText: 'ตกลง' });
+                        return;
+                    }
+
+                    const values = data.values || {};
+                    let filledCount = 0;
+                    const isEmpty = (value) => value === '' || value === null || value === undefined;
+
+                    this.formFieldsAnswer = this.formFieldsAnswer.map((field) => {
+                        if (field.type === 'subform') {
+                            const subfields = field.subfields.map((subfield) => {
+                                if (isEmpty(subfield.answer) && Object.prototype.hasOwnProperty.call(values, subfield.id)) {
+                                    filledCount++;
+                                    return { ...subfield, answer: values[subfield.id] };
+                                }
+                                return subfield;
+                            });
+                            return { ...field, subfields };
+                        }
+
+                        if (isEmpty(field.answer) && Object.prototype.hasOwnProperty.call(values, field.id)) {
+                            filledCount++;
+                            return { ...field, answer: values[field.id] };
+                        }
+                        return field;
+                    });
+
+                    if (isEmpty(this.selectUserId) && data.user_id) {
+                        this.selectUserId = data.user_id;
+                        filledCount++;
+                    }
+                    if (isEmpty(this.selectVehicleId) && data.vehicle_id) {
+                        this.selectVehicleId = data.vehicle_id;
+                        filledCount++;
+                    }
+
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: filledCount > 0 ? 'success' : 'info',
+                        title: filledCount > 0 ? `นำเข้าข้อมูลสำเร็จ (เติม ${filledCount} ช่อง)` : 'ไม่มีช่องว่างให้เติมจากใบนี้',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true,
+                    });
                 },
 
                 // validateForm() {
