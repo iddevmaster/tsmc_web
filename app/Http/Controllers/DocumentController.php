@@ -185,8 +185,7 @@ class DocumentController extends Controller
         abort_unless($this->chainService->canAccessSubmission($submission), 403);
         $form_data = Form::where('id', $submission->form_id)->firstOrFail();
         $is_show = true;
-        $chainActions = $this->chainActionsFor($submission);
-        return view('form.checking.continueDocument', compact('submission', 'form_data', 'is_show', 'chainActions'));
+        return view('form.checking.continueDocument', compact('submission', 'form_data', 'is_show'));
     }
 
     /**
@@ -198,8 +197,7 @@ class DocumentController extends Controller
         abort_unless($this->chainService->canAccessSubmission($submission), 403);
         $form_data = Form::where('id', $submission->form_id)->firstOrFail();
         $is_show = false;
-        $chainActions = [];
-        return view('form.checking.continueDocument', compact('submission', 'form_data', 'is_show', 'chainActions'));
+        return view('form.checking.continueDocument', compact('submission', 'form_data', 'is_show'));
     }
 
     /**
@@ -261,6 +259,13 @@ class DocumentController extends Controller
         }
 
         $submissions = $query->orderByDesc('created_at')->get();
+
+        if (FormChainLink::where('source_form_id', $form_data->id)->exists()) {
+            foreach ($submissions as $submission) {
+                $submission->chainActions = $this->chainActionsFor($submission);
+            }
+        }
+
         return view('form.table.formDataTable', compact('submissions', 'form_data'));
     }
 

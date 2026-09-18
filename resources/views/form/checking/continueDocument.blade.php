@@ -167,13 +167,6 @@
                     <div class="d-flex justify-content-center gap-2">
                         @if ($is_show)
                             <button class="btn btn-success" type="button" onclick="window.print()">Print</button>
-                            @foreach ($chainActions as $chainAction)
-                                @if ($chainAction['submission_id'])
-                                    <a href="{{ route('document.submission.show', ['submission_id' => $chainAction['submission_id']]) }}" class="btn btn-outline-primary">ดูฟอร์มต่อเนื่อง: {{ $chainAction['title'] }}</a>
-                                @else
-                                    <a href="{{ route('document.fill-out', ['form_id' => $chainAction['form_id']]) }}?from_submission={{ $submission->submission_id }}" class="btn btn-primary">ทำฟอร์มต่อเนื่อง: {{ $chainAction['title'] }}</a>
-                                @endif
-                            @endforeach
                         @else
                             <button class="btn btn-success" type="submit" {{ session('org_status') == 2 ? 'disabled' : '' }}>บันทึก</button>
                         @endif

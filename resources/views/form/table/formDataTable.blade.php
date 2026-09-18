@@ -71,9 +71,40 @@
                                                     data-bs-target="#submissionhis{{ $index }}">
                                                     <i class="bi bi-clock-history"></i>
                                                 </button>
+                                                @if (!empty($submission->chainActions))
+                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal"
+                                                        data-bs-target="#chainActions{{ $index }}" title="เอกสารต่อเนื่อง">
+                                                        <i class="bi bi-link-45deg"></i>
+                                                    </button>
+                                                @endif
                                             </td>
                                         </tr>
                                         <!-- Modal -->
+                                        @if (!empty($submission->chainActions))
+                                            <div class="modal fade" id="chainActions{{ $index }}" tabindex="-1"
+                                                aria-labelledby="chainActionsLabel{{ $index }}" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h1 class="modal-title fs-5" id="chainActionsLabel{{ $index }}">เอกสารต่อเนื่อง</h1>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                                aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <div class="d-flex flex-column gap-2">
+                                                                @foreach ($submission->chainActions as $chainAction)
+                                                                    @if ($chainAction['submission_id'])
+                                                                        <a href="{{ route('document.submission.show', ['submission_id' => $chainAction['submission_id']]) }}" class="btn btn-outline-primary">ดูฟอร์มต่อเนื่อง: {{ $chainAction['title'] }}</a>
+                                                                    @else
+                                                                        <a href="{{ route('document.fill-out', ['form_id' => $chainAction['form_id']]) }}?from_submission={{ $submission->submission_id }}" class="btn btn-primary">ทำฟอร์มต่อเนื่อง: {{ $chainAction['title'] }}</a>
+                                                                    @endif
+                                                                @endforeach
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
                                         <div class="modal fade" id="submissionhis{{ $index }}" tabindex="-1"
                                             aria-labelledby="submissionhisLabel{{ $index }}" aria-hidden="true">
                                             <div class="modal-dialog">

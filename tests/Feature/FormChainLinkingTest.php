@@ -218,7 +218,7 @@ class FormChainLinkingTest extends TestCase
         );
     }
 
-    public function test_detail_action_hidden_without_permission_and_switches_to_view_after_child_exists(): void
+    public function test_document_table_chain_action_hidden_without_permission_and_switches_to_view_after_child_exists(): void
     {
         $org = $this->makeOrg();
         $sourceForm = $this->makeForm($org);
@@ -239,10 +239,12 @@ class FormChainLinkingTest extends TestCase
             'org' => (string) $org->id,
         ]);
 
-        $response = $this->actingAs($user)->get(route('document.submission.show', $submission->submission_id));
+        $response = $this->actingAs($user)->get(route('document.table', $sourceForm->form_id));
         $response->assertOk();
 
-        $actions = collect($response->original->getData()['chainActions']);
+        $listedSubmission = collect($response->original->getData()['submissions'])
+            ->firstWhere('submission_id', $submission->submission_id);
+        $actions = collect($listedSubmission->chainActions);
         $this->assertCount(1, $actions);
         $this->assertSame($allowedNextForm->title, $actions->first()['title']);
         $this->assertNull($actions->first()['submission_id']);
@@ -255,8 +257,10 @@ class FormChainLinkingTest extends TestCase
             'org' => (string) $org->id,
         ]);
 
-        $response = $this->actingAs($user)->get(route('document.submission.show', $submission->submission_id));
-        $actions = collect($response->original->getData()['chainActions']);
+        $response = $this->actingAs($user)->get(route('document.table', $sourceForm->form_id));
+        $listedSubmission = collect($response->original->getData()['submissions'])
+            ->firstWhere('submission_id', $submission->submission_id);
+        $actions = collect($listedSubmission->chainActions);
         $this->assertNotNull($actions->first()['submission_id']);
     }
 }
