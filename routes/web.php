@@ -141,6 +141,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/document/{form_id}/table', [DocumentController::class, 'showDocTable'])->name('document.table');
     Route::get('/document/submission/{submission_id}/continue', [DocumentController::class, 'edit'])->name('document.submission.edit');
     Route::get('/document/submission/{submission_id}/detail', [DocumentController::class, 'show'])->name('document.submission.show');
+    Route::get('/document/{form_id}/import-candidates', [DocumentController::class, 'importCandidates'])->name('document.import.candidates');
+    Route::get('/document/import-data/{submission_id}', [DocumentController::class, 'importData'])->name('document.import.data');
 
     Route::get('/document/export/filter', [DocumentController::class, 'filterDocument'])->name('document.export.filter');
     Route::post('/export-document', [ExcelController::class, 'export']);

@@ -334,4 +334,136 @@ class FormImportTest extends TestCase
 
         $this->assertSame('ค่าจากช่องแรก', $result['values'][$targetField->id]);
     }
+
+    public function test_import_candidates_endpoint_returns_todays_cross_form_candidates(): void
+    {
+        $org = $this->makeOrg();
+        $targetForm = $this->makeForm($org);
+        $this->makeField($targetForm, 'ทะเบียนรถ');
+        $sourceForm = $this->makeForm($org);
+        $this->makeField($sourceForm, 'ทะเบียนรถ');
+        $user = $this->makeOrgUser($org, [$sourceForm->id, $targetForm->id]);
+        $submission = FormSubmissions::create([
+            'submission_id' => Str::uuid(),
+            'form_id' => $sourceForm->id,
+            'submitted_by' => $user->id,
+            'org' => (string) $org->id,
+        ]);
+
+        $response = $this->actingAs($user)->getJson(route('document.import.candidates', $targetForm->form_id));
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'candidates');
+        $response->assertJsonPath('candidates.0.submission_id', (string) $submission->submission_id);
+    }
+
+    public function test_import_data_endpoint_returns_matched_values_for_a_valid_source(): void
+    {
+        $org = $this->makeOrg();
+        $sourceForm = $this->makeForm($org, ['select_user' => false]);
+        $targetForm = $this->makeForm($org, ['select_user' => false]);
+        $sourceField = $this->makeField($sourceForm, 'ทะเบียนรถ');
+        $targetField = $this->makeField($targetForm, 'ทะเบียนรถ');
+        $user = $this->makeOrgUser($org, [$sourceForm->id, $targetForm->id]);
+        $source = FormSubmissions::create([
+            'submission_id' => Str::uuid(),
+            'form_id' => $sourceForm->id,
+            'submitted_by' => $user->id,
+            'org' => (string) $org->id,
+        ]);
+        FormSubmissionValue::create([
+            'submission_id' => $source->id,
+            'field_id' => $sourceField->id,
+            'value' => 'กข-1234',
+            'submitted_by' => $user->id,
+        ]);
+
+        $response = $this->actingAs($user)->getJson(
+            route('document.import.data', $source->submission_id) . '?target_form_id=' . $targetForm->form_id
+        );
+
+        $response->assertOk();
+        $response->assertJsonPath("values.{$targetField->id}", 'กข-1234');
+    }
+
+    public function test_import_data_endpoint_rejects_a_source_from_another_org(): void
+    {
+        $org = $this->makeOrg('Org A');
+        $otherOrg = $this->makeOrg('Org B');
+        $targetForm = $this->makeForm($org);
+        $sourceForm = $this->makeForm($otherOrg);
+        $this->makeField($targetForm, 'ทะเบียนรถ');
+        $this->makeField($sourceForm, 'ทะเบียนรถ');
+        $otherUser = $this->makeOrgUser($otherOrg, [$sourceForm->id]);
+        $foreignSource = FormSubmissions::create([
+            'submission_id' => Str::uuid(),
+            'form_id' => $sourceForm->id,
+            'submitted_by' => $otherUser->id,
+            'org' => (string) $otherOrg->id,
+        ]);
+        $user = $this->makeOrgUser($org, [$targetForm->id]);
+
+        $response = $this->actingAs($user)->getJson(
+            route('document.import.data', $foreignSource->submission_id) . '?target_form_id=' . $targetForm->form_id
+        );
+
+        $response->assertStatus(422);
+        $this->assertArrayNotHasKey('values', $response->json());
+    }
+
+    public function test_import_data_endpoint_rejects_a_source_of_the_same_form_as_target(): void
+    {
+        $org = $this->makeOrg();
+        $targetForm = $this->makeForm($org);
+        $this->makeField($targetForm, 'ทะเบียนรถ');
+        $user = $this->makeOrgUser($org, [$targetForm->id]);
+        $source = FormSubmissions::create([
+            'submission_id' => Str::uuid(),
+            'form_id' => $targetForm->id,
+            'submitted_by' => $user->id,
+            'org' => (string) $org->id,
+        ]);
+
+        $response = $this->actingAs($user)->getJson(
+            route('document.import.data', $source->submission_id) . '?target_form_id=' . $targetForm->form_id
+        );
+
+        $response->assertStatus(422);
+    }
+
+    public function test_import_data_endpoint_rejects_a_nonexistent_source(): void
+    {
+        $org = $this->makeOrg();
+        $targetForm = $this->makeForm($org);
+        $user = $this->makeOrgUser($org, [$targetForm->id]);
+
+        $response = $this->actingAs($user)->getJson(
+            route('document.import.data', (string) Str::uuid()) . '?target_form_id=' . $targetForm->form_id
+        );
+
+        $response->assertStatus(422);
+    }
+
+    public function test_import_data_endpoint_rejects_a_source_the_user_cannot_access(): void
+    {
+        $org = $this->makeOrg();
+        $targetForm = $this->makeForm($org);
+        $sourceForm = $this->makeForm($org);
+        $this->makeField($targetForm, 'ทะเบียนรถ');
+        $this->makeField($sourceForm, 'ทะเบียนรถ');
+        $submitter = $this->makeOrgUser($org, [$sourceForm->id]);
+        $source = FormSubmissions::create([
+            'submission_id' => Str::uuid(),
+            'form_id' => $sourceForm->id,
+            'submitted_by' => $submitter->id,
+            'org' => (string) $org->id,
+        ]);
+        $viewer = $this->makeOrgUser($org, [$targetForm->id]);
+
+        $response = $this->actingAs($viewer)->getJson(
+            route('document.import.data', $source->submission_id) . '?target_form_id=' . $targetForm->form_id
+        );
+
+        $response->assertStatus(422);
+    }
 }

@@ -11,6 +11,7 @@ use App\Models\FormSubmissionValue;
 use App\Models\User_detail;
 use App\Models\Vehicle;
 use App\Services\FormChainService;
+use App\Services\FormImportService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,8 +20,10 @@ use Illuminate\Support\Str;
 
 class DocumentController extends Controller
 {
-    public function __construct(private FormChainService $chainService)
-    {
+    public function __construct(
+        private FormChainService $chainService,
+        private FormImportService $importService,
+    ) {
     }
 
     /**
@@ -273,6 +276,45 @@ class DocumentController extends Controller
         }
 
         return view('exportDocument.filterData', compact('form_cates', 'vehicles', 'users'));
+    }
+
+    public function importCandidates(string $form_id)
+    {
+        $org_id = $this->chainService->currentOrgId() ?? '';
+
+        $form = Form::where('form_id', $form_id)
+            ->where(function ($query) use ($org_id) {
+                $query->where('org', $org_id)->orWhere('is_default', true);
+            })
+            ->firstOrFail();
+        abort_unless($this->chainService->canFillForm($form), 403);
+
+        return response()->json(['candidates' => $this->importService->candidatesForToday($form)]);
+    }
+
+    public function importData(Request $request, string $submission_id)
+    {
+        $org_id = $this->chainService->currentOrgId() ?? '';
+
+        $targetForm = Form::where('form_id', $request->query('target_form_id'))
+            ->where(function ($query) use ($org_id) {
+                $query->where('org', $org_id)->orWhere('is_default', true);
+            })
+            ->firstOrFail();
+        abort_unless($this->chainService->canFillForm($targetForm), 403);
+
+        $source = FormSubmissions::where('submission_id', $submission_id)->first();
+        $isValidSource = $source
+            && $this->chainService->canAccessSubmission($source)
+            && $source->form_id !== $targetForm->id
+            && $source->created_at >= now()->startOfDay()
+            && $source->created_at <= now();
+
+        if (!$isValidSource) {
+            return response()->json(['errors' => 'ไม่สามารถนำเข้าข้อมูลจากใบนี้ได้'], 422);
+        }
+
+        return response()->json($this->importService->matchedValues($source, $targetForm));
     }
 
     private function chainActionsFor(FormSubmissions $submission): array
