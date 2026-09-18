@@ -5,7 +5,7 @@
         <div class="row justify-content-center">
             <div class="px-3 px-md-5">
                 <div class="card">
-                    <div class="card-body px-md-5" x-data="formFillOut({{ $form_data->formFields }}, {{ $vehicles }}, '{{ $form_data->form_id }}', @json($prefilledValues), @json($prefilledUserId), @json($prefilledVehicleId), @json($chainParentSubmission))">
+                    <div class="card-body px-md-5" x-data="formFillOut({{ $form_data->formFields }}, {{ $vehicles }}, '{{ $form_data->form_id }}', {{ json_encode($prefilledValues) }}, {{ json_encode($prefilledUserId) }}, {{ json_encode($prefilledVehicleId) }}, {{ json_encode($chainParentSubmission) }})">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <p class="fs-5 fw-bold mb-0">{{ $form_data->title }}</p>
                             <button type="button" class="btn btn-outline-primary btn-sm" @click="openImportPicker()">
