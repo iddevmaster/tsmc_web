@@ -35,7 +35,7 @@ No migrations. No changes to `continueDocument.blade.php` (edit flow is explicit
 
 **Why first:** `FormImportTest.php` (Task 2+) needs the exact same org/user/form/field builders `FormChainLinkingTest.php` already has, plus one new helper (`grantCanSeeAllDocs`) that visibility tests in Task 2 need. Extracting now avoids duplicating this boilerplate across two test files.
 
-- [ ] **Step 1: Create the trait**
+- [x] **Step 1: Create the trait**
 
 ```php
 <?php
@@ -141,7 +141,7 @@ trait BuildsFormTestData
 }
 ```
 
-- [ ] **Step 2: Use the trait in `FormChainLinkingTest` and remove the duplicated methods**
+- [x] **Step 2: Use the trait in `FormChainLinkingTest` and remove the duplicated methods**
 
 In `tests/Feature/FormChainLinkingTest.php`, replace lines 1-88 (everything from the opening `<?php` through the closing `}` of `makeField()`, i.e. the whole header block and all four private builder methods) with:
 
@@ -170,12 +170,12 @@ class FormChainLinkingTest extends TestCase
 
 (This drops the now-unused `FormField`, `Position`, `PositionHasForm`, `User_detail` imports — `BuildsFormTestData` imports what it needs itself — and removes the four private methods, since the trait now supplies them. Every test method below this point (`test_chain_link_creation_rejects_a_form_from_another_org` onward) stays exactly as-is.)
 
-- [ ] **Step 3: Run the existing chain-linking tests to confirm nothing broke**
+- [x] **Step 3: Run the existing chain-linking tests to confirm nothing broke**
 
 Run: `php artisan test --filter=FormChainLinkingTest`
 Expected: `Tests: 8 passed (25 assertions)` — same result as before the refactor.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Commit** *(deferred: the workspace `.git` directory is read-only in this environment)*
 
 ```bash
 git add tests/Concerns/BuildsFormTestData.php tests/Feature/FormChainLinkingTest.php
@@ -195,7 +195,7 @@ EOF
 - Create: `app/Services/FormImportService.php`
 - Create: `tests/Feature/FormImportTest.php`
 
-- [ ] **Step 1: Create the service with a stub method**
+- [x] **Step 1: Create the service with a stub method**
 
 ```php
 <?php
@@ -227,7 +227,7 @@ class FormImportService
 }
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 Create `tests/Feature/FormImportTest.php`:
 
@@ -420,12 +420,12 @@ class FormImportTest extends TestCase
 }
 ```
 
-- [ ] **Step 3: Run the tests to confirm the expected failures**
+- [x] **Step 3: Run the tests to confirm the expected failures**
 
 Run: `php artisan test --filter=FormImportTest`
 Expected: `test_candidates_include_a_same_org_today_visible_cross_form_submission_with_a_matching_field` and `test_candidates_include_a_submission_visible_via_can_see_all_docs` FAIL (stub always returns empty); the other five pass trivially since they all assert an empty result.
 
-- [ ] **Step 4: Implement `candidatesForToday()`**
+- [x] **Step 4: Implement `candidatesForToday()`**
 
 Replace the stub method body in `app/Services/FormImportService.php`:
 
@@ -482,12 +482,12 @@ Replace the stub method body in `app/Services/FormImportService.php`:
     }
 ```
 
-- [ ] **Step 5: Run the tests again to confirm they all pass**
+- [x] **Step 5: Run the tests again to confirm they all pass**
 
 Run: `php artisan test --filter=FormImportTest`
 Expected: `Tests: 7 passed`
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Commit** *(deferred: the workspace `.git` directory is read-only in this environment)*
 
 ```bash
 git add app/Services/FormImportService.php tests/Feature/FormImportTest.php
@@ -507,7 +507,7 @@ EOF
 - Modify: `app/Services/FormImportService.php`
 - Modify: `tests/Feature/FormImportTest.php`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add these methods to `tests/Feature/FormImportTest.php` (inside the class, after the Task 2 tests):
 
@@ -659,12 +659,12 @@ Add these methods to `tests/Feature/FormImportTest.php` (inside the class, after
     }
 ```
 
-- [ ] **Step 2: Run the tests to confirm they fail**
+- [x] **Step 2: Run the tests to confirm they fail**
 
 Run: `php artisan test --filter=FormImportTest`
 Expected: `Error: Call to undefined method App\Services\FormImportService::matchedValues()`
 
-- [ ] **Step 3: Implement `matchedValues()`**
+- [x] **Step 3: Implement `matchedValues()`**
 
 Add this method to `app/Services/FormImportService.php`, after `candidatesForToday()`:
 
@@ -710,12 +710,12 @@ Add this method to `app/Services/FormImportService.php`, after `candidatesForTod
     }
 ```
 
-- [ ] **Step 4: Run the tests again to confirm they pass**
+- [x] **Step 4: Run the tests again to confirm they pass**
 
 Run: `php artisan test --filter=FormImportTest`
-Expected: `Tests: 12 passed`
+Expected: `Tests: 13 passed`
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Commit** *(deferred: the workspace `.git` directory is read-only in this environment)*
 
 ```bash
 git add app/Services/FormImportService.php tests/Feature/FormImportTest.php
@@ -736,7 +736,7 @@ EOF
 - Modify: `app/Http/Controllers/DocumentController.php:1-24` (imports + constructor), and insert new methods after `filterDocument()` (currently ending at line 276)
 - Modify: `tests/Feature/FormImportTest.php`
 
-- [ ] **Step 1: Write the failing HTTP tests**
+- [x] **Step 1: Write the failing HTTP tests**
 
 Add these methods to `tests/Feature/FormImportTest.php` (after the Task 3 tests):
 
@@ -881,12 +881,12 @@ Add these methods to `tests/Feature/FormImportTest.php` (after the Task 3 tests)
     }
 ```
 
-- [ ] **Step 2: Run the tests to confirm they fail**
+- [x] **Step 2: Run the tests to confirm they fail**
 
 Run: `php artisan test --filter=FormImportTest`
 Expected: failures with `Route [document.import.candidates] not defined` / `Route [document.import.data] not defined`.
 
-- [ ] **Step 3: Add the routes**
+- [x] **Step 3: Add the routes**
 
 In `routes/web.php`, right after line 143 (`Route::get('/document/submission/{submission_id}/detail', ...)->name('document.submission.show');`), add:
 
@@ -895,7 +895,7 @@ In `routes/web.php`, right after line 143 (`Route::get('/document/submission/{su
     Route::get('/document/import-data/{submission_id}', [DocumentController::class, 'importData'])->name('document.import.data');
 ```
 
-- [ ] **Step 4: Inject `FormImportService` into `DocumentController`**
+- [x] **Step 4: Inject `FormImportService` into `DocumentController`**
 
 In `app/Http/Controllers/DocumentController.php`, add the import next to the existing `FormChainService` import (around line 13):
 
@@ -922,7 +922,7 @@ to:
     }
 ```
 
-- [ ] **Step 5: Add the two controller actions**
+- [x] **Step 5: Add the two controller actions**
 
 In `app/Http/Controllers/DocumentController.php`, insert these two public methods right after `filterDocument()` (currently ending at line 276, right before the `private function chainActionsFor` method):
 
@@ -967,17 +967,17 @@ In `app/Http/Controllers/DocumentController.php`, insert these two public method
     }
 ```
 
-- [ ] **Step 6: Run the tests again to confirm they pass**
+- [x] **Step 6: Run the tests again to confirm they pass**
 
 Run: `php artisan test --filter=FormImportTest`
-Expected: `Tests: 18 passed`
+Expected: `Tests: 19 passed`
 
-- [ ] **Step 7: Run the full suite to confirm no regression**
+- [x] **Step 7: Run the full suite to confirm no regression** — cross-form and chain-linking suites pass; the pre-existing `Tests\Feature\ExampleTest` root-route assertion still fails because `/` redirects (302).
 
 Run: `php artisan test`
 Expected: all tests pass, including the 8 `FormChainLinkingTest` cases from Task 1.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: Commit** *(deferred: the workspace `.git` directory is read-only in this environment)*
 
 ```bash
 git add routes/web.php app/Http/Controllers/DocumentController.php tests/Feature/FormImportTest.php
@@ -998,7 +998,7 @@ EOF
 
 **No PHPUnit coverage for this task** — it is pure Blade/Alpine.js UI, consistent with how the existing clone-form button and other client-side flows in this codebase are verified (manual checklist, no JS test runner is set up in this project). Verify manually per Step 3 below.
 
-- [ ] **Step 1: Add the import button**
+- [x] **Step 1: Add the import button**
 
 In `resources/views/form/checking/fillOutForm.blade.php`, replace:
 
@@ -1019,7 +1019,7 @@ with:
                         <form @submit.prevent="handleSubmit">
 ```
 
-- [ ] **Step 2: Add the Alpine methods**
+- [x] **Step 2: Add the Alpine methods**
 
 In the same file's `<script>` block, replace:
 
@@ -1130,7 +1130,7 @@ with:
                 // validateForm() {
 ```
 
-- [ ] **Step 3: Manual verification**
+- [ ] **Step 3: Manual verification** *(deferred: Blade cache compilation passed; browser walkthrough requires the app runtime and authenticated session)*
 
 Run the dev server (`php artisan serve` + `npm run dev`), then:
 
@@ -1142,7 +1142,7 @@ Run the dev server (`php artisan serve` + `npm run dev`), then:
 6. Confirm a submission from yesterday does not appear as a candidate today.
 7. Confirm the button on `continueDocument.blade.php` (editing an existing submission) was **not** added there — out of scope per the spec.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Commit** *(deferred: the workspace `.git` directory is read-only in this environment)*
 
 ```bash
 git add resources/views/form/checking/fillOutForm.blade.php
@@ -1161,12 +1161,12 @@ EOF
 **Files:**
 - Modify: `docs/customer-feedback.md`
 
-- [ ] **Step 1: Check off item 5**
+- [x] **Step 1: Check off item 5**
 
 In `docs/customer-feedback.md`, replace:
 
 ```markdown
-- [ ] **Import ข้อมูลข้ามฟอร์ม** — ตอนกรอกแบบฟอร์ม อยากให้ import ข้อมูลจากแบบฟอร์มอื่นได้ โดยระบบ fill
+- [x] **Import ข้อมูลข้ามฟอร์ม** — ตอนกรอกแบบฟอร์ม อยากให้ import ข้อมูลจากแบบฟอร์มอื่นได้ โดยระบบ fill
       เฉพาะช่อง (field) ที่ตรงกันระหว่างสองฟอร์มให้อัตโนมัติ (อยู่ระหว่างออกแบบ — ดู
       `docs/superpowers/specs/2026-09-18-form-cross-form-import-design.md`)
 ```
@@ -1180,7 +1180,7 @@ with:
       `docs/superpowers/specs/2026-09-18-form-cross-form-import-design.md`)
 ```
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: Commit** *(deferred: the workspace `.git` directory is read-only in this environment)*
 
 ```bash
 git add docs/customer-feedback.md

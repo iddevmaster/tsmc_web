@@ -17,6 +17,7 @@
       "form chain linking" ทั่วไปที่ admin กำหนด next-form + field mapping ได้เอง ไม่ผูกกับ rollcall ตายตัว —
       ดู `docs/superpowers/specs/2026-09-16-form-chain-linking-design.md`, ทดสอบผ่านครบ 8 เคสใน
       `tests/Feature/FormChainLinkingTest.php`)
-- [ ] **Import ข้อมูลข้ามฟอร์ม** — ตอนกรอกแบบฟอร์ม อยากให้ import ข้อมูลจากแบบฟอร์มอื่นได้ โดยระบบ fill
-      เฉพาะช่อง (field) ที่ตรงกันระหว่างสองฟอร์มให้อัตโนมัติ (อยู่ระหว่างออกแบบ — ดู
+- [x] **Import ข้อมูลข้ามฟอร์ม** — ตอนกรอกแบบฟอร์ม อยากให้ import ข้อมูลจากแบบฟอร์มอื่นได้ โดยระบบ fill
+      เฉพาะช่อง (field) ที่ตรงกันระหว่างสองฟอร์มให้อัตโนมัติ (ดึงเฉพาะใบที่กรอกวันนี้ในองค์กรเดียวกัน
+      จับคู่ label+type อัตโนมัติ เติมเฉพาะช่องว่าง ไม่มี admin config — ดู
       `docs/superpowers/specs/2026-09-18-form-cross-form-import-design.md`)
