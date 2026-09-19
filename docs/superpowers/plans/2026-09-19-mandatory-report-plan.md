@@ -17,6 +17,12 @@ catalog (`config/mandatory_report.php`) with rule-driven queries against `form_s
 
 Spec: [docs/superpowers/specs/2026-09-19-mandatory-report-design.md](../specs/2026-09-19-mandatory-report-design.md)
 
+> **Implementation status (2026-09-19):** Complete in the working tree. The implementation includes the
+> catalog, rule persistence and CRUD UI, report aggregation, clone propagation, report page, routes, menu
+> links, and feature coverage. The focused suite passes; the full suite has one pre-existing failure in
+> Tests/Feature/ExampleTest because the unauthenticated root route returns 302 instead of the test's expected
+> 200.
+
 ---
 
 ## File Structure
@@ -1799,6 +1805,9 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ---
 
 ## Self-Review Notes
+
+**Implementation verification:** MandatoryReportTest and MandatoryReportRuleTest pass (19 tests, 41
+assertions), Blade templates cache successfully, and all mandatory-report routes are registered.
 
 - **Spec coverage:** Item catalog (Task 1), `form_report_rules` schema (Task 2), rule settings page
   (Tasks 8–9), clone propagation (Task 10), counting service incl. all 8 spec test scenarios (Tasks 4–7),
