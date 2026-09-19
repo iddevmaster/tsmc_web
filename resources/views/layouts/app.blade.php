@@ -150,6 +150,12 @@
                                             รายงานผลส่งกรมฯ
                                         </a>
                                     </li>
+                                    <li class="sidebar-item" id="mandatoryReportPage">
+                                        <a href="{{ route('mandatory.report', ['quarter' => Carbon\Carbon::now()->quarterOfYear()]) }}"
+                                            class="sidebar-link">
+                                            รายงานภาคบังคับ
+                                        </a>
+                                    </li>
                                 </ul>
                             </li>
 
@@ -391,6 +397,12 @@
                                         <a href="{{ route('performance.report', ['quarter' => Carbon\Carbon::now()->quarterOfYear()]) }}"
                                             class="sidebar-link">
                                             รายงานผลส่งกรมฯ
+                                        </a>
+                                    </li>
+                                    <li class="sidebar-item" id="mandatoryReportPage">
+                                        <a href="{{ route('mandatory.report', ['quarter' => Carbon\Carbon::now()->quarterOfYear()]) }}"
+                                            class="sidebar-link">
+                                            รายงานภาคบังคับ
                                         </a>
                                     </li>
                                     {{-- <li class="sidebar-item" id="performanceReportPage">

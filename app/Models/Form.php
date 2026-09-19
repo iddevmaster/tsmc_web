@@ -49,6 +49,11 @@ class Form extends Model
         return $this->hasMany(PositionHasForm::class, 'form_id');
     }
 
+    public function reportRules()
+    {
+        return $this->hasMany(FormReportRule::class, 'form_id');
+    }
+
     public function hasThisPosition($positionId = null)
     {
         return $this->hasPosition()->where('position_id', $positionId)->exists();

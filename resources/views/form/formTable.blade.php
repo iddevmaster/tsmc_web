@@ -59,6 +59,11 @@
                                                 <a href="{{ route('form.chain.edit', ['form_id' => $form->form_id]) }}" class="btn btn-secondary btn-sm" data-bs-toggle="tooltip" data-bs-title="จัดการฟอร์มต่อเนื่อง">
                                                     <i class="bi bi-diagram-3"></i>
                                                 </a>
+                                                @if (!$form->is_default || Auth::user()->username === 'tsmcadmin')
+                                                    <a href="{{ route('form.report-rules.edit', ['form_id' => $form->form_id]) }}" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="รายงานภาคบังคับ">
+                                                        <i class="bi bi-clipboard-data"></i>
+                                                    </a>
+                                                @endif
                                                 <button type="button" class="btn btn-info btn-sm clone-form-btn" data-form-id="{{ $form->id }}" data-form-category="{{ $category_name }}" data-bs-toggle="tooltip" data-bs-title="คัดลอก">
                                                     <i class="bi bi-files"></i>
                                                 </button>

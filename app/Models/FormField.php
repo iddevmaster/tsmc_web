@@ -56,4 +56,14 @@ class FormField extends Model
         return $prefix . str_pad($lastSeq + 1, 4, '0', STR_PAD_LEFT);
     }
 
+    public function reportRules()
+    {
+        return $this->hasMany(FormReportRule::class, 'condition_field_id');
+    }
+
+    public function distinctReportRules()
+    {
+        return $this->hasMany(FormReportRule::class, 'distinct_field_id');
+    }
+
 }

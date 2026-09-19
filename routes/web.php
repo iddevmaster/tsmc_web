@@ -7,6 +7,8 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\ExcelController;
 use App\Http\Controllers\FileUploadController;
 use App\Http\Controllers\FormController;
+use App\Http\Controllers\FormReportRuleController;
+use App\Http\Controllers\MandatoryReportController;
 use App\Http\Controllers\ImportDataController;
 use App\Http\Controllers\LineController;
 use App\Http\Controllers\LogBookController;
@@ -132,6 +134,10 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/forms/{form_id}/chain-links/{chainLink}', [FormController::class, 'destroyFormChainLink'])->name('form.chain.links.destroy');
     Route::put('/forms/{form_id}/chain-links/{chainLink}/context', [FormController::class, 'updateFormChainContext'])->name('form.chain.context.update');
     Route::put('/forms/{form_id}/chain-links/{chainLink}/maps/{targetField}', [FormController::class, 'updateFormChainMap'])->name('form.chain.maps.update');
+    Route::get('/forms/{form_id}/report-rules', [FormReportRuleController::class, 'edit'])->name('form.report-rules.edit');
+    Route::post('/forms/{form_id}/report-rules', [FormReportRuleController::class, 'store'])->name('form.report-rules.store');
+    Route::put('/forms/{form_id}/report-rules/{rule}', [FormReportRuleController::class, 'update'])->name('form.report-rules.update');
+    Route::delete('/forms/{form_id}/report-rules/{rule}', [FormReportRuleController::class, 'destroy'])->name('form.report-rules.destroy');
 
     Route::get('/document/fill-out/select-form', [DocumentController::class, 'selectForm'])->name('document.fill-out.selectform');
     Route::get('/document/{form_id}/fill-out', [DocumentController::class, 'fillOutForm'])->name('document.fill-out');
@@ -149,6 +155,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/performance-report', [ExcelController::class, 'performanceReport'])->name('performance.report');
     Route::get('/export-performance-report', [ExcelController::class, 'exportPerformanceReport'])->name('export.performance.report');
     Route::get('/submission-count', [ExcelController::class, 'submissionCount'])->name('submission.count');
+    Route::get('/mandatory-report', [MandatoryReportController::class, 'index'])->name('mandatory.report');
 
     Route::get('/import-data', [ImportDataController::class, 'index'])->name('importdata.index');
     Route::get('/import-data/download-template', [ExcelController::class, 'downloadUserTemplate'])->name('importdata.template');

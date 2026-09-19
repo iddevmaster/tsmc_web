@@ -4,6 +4,9 @@ namespace Tests\Concerns;
 
 use App\Models\Form;
 use App\Models\FormField;
+use App\Models\FieldOption;
+use App\Models\FormSubmissionValue;
+use App\Models\FormSubmissions;
 use App\Models\Organization;
 use App\Models\Position;
 use App\Models\PositionHasForm;
@@ -77,6 +80,34 @@ trait BuildsFormTestData
             'label' => $label,
             'type' => $type,
             'order_number' => $order,
+        ]);
+    }
+
+    private function addFieldOption(FormField $field, string $value): FieldOption
+    {
+        return FieldOption::create([
+            'field_id' => $field->id,
+            'value' => $value,
+        ]);
+    }
+
+    private function makeSubmission(Form $form, Organization $org, array $overrides = []): FormSubmissions
+    {
+        return FormSubmissions::create(array_merge([
+            'submission_id' => Str::uuid(),
+            'form_id' => $form->id,
+            'submitted_by' => null,
+            'org' => (string) $org->id,
+        ], $overrides));
+    }
+
+    private function setSubmissionValue(FormSubmissions $submission, FormField $field, string $value): FormSubmissionValue
+    {
+        return FormSubmissionValue::create([
+            'submission_id' => $submission->id,
+            'field_id' => $field->id,
+            'value' => $value,
+            'submitted_by' => $submission->submitted_by,
         ]);
     }
 

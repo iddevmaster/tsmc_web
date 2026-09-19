@@ -305,6 +305,8 @@ class FormController extends Controller
                 'is_default' => Auth::user()->username === 'tsmcadmin' ? true : false,
             ]);
 
+            $fieldIdMap = [];
+
             foreach ($originalForm->formFields as $field) {
                 $newField = FormField::create([
                     'form_id' => $newForm->id,
@@ -316,12 +318,25 @@ class FormController extends Controller
                     'is_default' => $newForm->is_default,
                 ]);
 
+                $fieldIdMap[$field->id] = $newField->id;
+
                 foreach ($field->options as $option) {
                     FieldOption::create([
                         'field_id' => $newField->id,
                         'value' => $option->value,
                     ]);
                 }
+            }
+
+            foreach ($originalForm->reportRules as $rule) {
+                \App\Models\FormReportRule::create([
+                    'form_id' => $newForm->id,
+                    'item_code' => $rule->item_code,
+                    'condition_field_id' => $rule->condition_field_id ? ($fieldIdMap[$rule->condition_field_id] ?? null) : null,
+                    'condition_values' => $rule->condition_values,
+                    'distinct_by' => $rule->distinct_by,
+                    'distinct_field_id' => $rule->distinct_field_id ? ($fieldIdMap[$rule->distinct_field_id] ?? null) : null,
+                ]);
             }
 
             foreach ($originalForm->hasPosition as $positionLink) {
