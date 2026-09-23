@@ -212,6 +212,12 @@
                                     ประวัติการเข้าใช้ระบบทั้งหมด
                                 </a>
                             </li>
+                            <li class="sidebar-item" id="allSubmissionsPage">
+                                <a href="{{ route('document.submissions.index') }}" class="sidebar-link">
+                                    <i class="bi bi-file-earmark-text"></i>
+                                    รายการแบบฟอร์มที่ส่งทั้งหมด
+                                </a>
+                            </li>
                         @endif
 
                         <li class="sidebar-header">
@@ -520,6 +526,12 @@
                                 <a href="{{ route('allLoginHistory') }}" class="sidebar-link">
                                     <i class="bi bi-clock-history"></i>
                                     ประวัติการเข้าใช้ระบบทั้งหมด
+                                </a>
+                            </li>
+                            <li class="sidebar-item" id="allSubmissionsPageMobile">
+                                <a href="{{ route('document.submissions.index') }}" class="sidebar-link">
+                                    <i class="bi bi-file-earmark-text"></i>
+                                    รายการแบบฟอร์มที่ส่งทั้งหมด
                                 </a>
                             </li>
                         @endif

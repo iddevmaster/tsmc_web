@@ -8,6 +8,7 @@ use App\Models\FormChainLink;
 use App\Models\FormSubmissionHistory;
 use App\Models\FormSubmissions;
 use App\Models\FormSubmissionValue;
+use App\Models\Organization;
 use App\Models\User_detail;
 use App\Models\Vehicle;
 use App\Services\FormChainService;
@@ -239,9 +240,48 @@ class DocumentController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(string $submission_id)
     {
-        //
+        abort_unless(Auth::user()->username === 'tsmcadmin', 403);
+
+        $submission = FormSubmissions::where('submission_id', $submission_id)->firstOrFail();
+        $submission->delete();
+
+        return back()->with('success', 'ลบแบบฟอร์มที่ส่งแล้วเรียบร้อย');
+    }
+
+    public function submissionsIndex(Request $request)
+    {
+        abort_unless(Auth::user()->username === 'tsmcadmin', 403);
+
+        $request->validate([
+            'form_id' => ['nullable', 'integer', 'exists:forms,id'],
+            'org' => ['nullable', 'integer', 'exists:organizations,id'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+        ], [
+            'form_id.integer' => 'แบบฟอร์มที่เลือกไม่ถูกต้อง',
+            'form_id.exists' => 'ไม่พบแบบฟอร์มที่เลือก',
+            'org.integer' => 'องค์กรที่เลือกไม่ถูกต้อง',
+            'org.exists' => 'ไม่พบองค์กรที่เลือก',
+            'date_from.date' => 'รูปแบบวันที่เริ่มไม่ถูกต้อง',
+            'date_to.date' => 'รูปแบบวันที่สิ้นสุดไม่ถูกต้อง',
+            'date_to.after_or_equal' => 'วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม',
+        ]);
+
+        $submissions = FormSubmissions::with(['getForm', 'organization', 'submittedByUser.userDetail.getPrefix'])
+            ->when($request->filled('form_id'), fn ($query) => $query->where('form_id', $request->integer('form_id')))
+            ->when($request->filled('org'), fn ($query) => $query->where('org', (string) $request->integer('org')))
+            ->when($request->filled('date_from'), fn ($query) => $query->whereDate('created_at', '>=', $request->date_from))
+            ->when($request->filled('date_to'), fn ($query) => $query->whereDate('created_at', '<=', $request->date_to))
+            ->orderByDesc('created_at')
+            ->paginate(50)
+            ->appends($request->query());
+
+        $forms = Form::orderBy('title')->get(['id', 'title']);
+        $organizations = Organization::orderBy('name')->get(['id', 'name']);
+
+        return view('exportDocument.submissionsIndex', compact('submissions', 'forms', 'organizations'));
     }
 
     public function showDocTable($form_id) {

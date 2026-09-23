@@ -151,6 +151,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/document/import-data/{submission_id}', [DocumentController::class, 'importData'])->name('document.import.data');
 
     Route::get('/document/export/filter', [DocumentController::class, 'filterDocument'])->name('document.export.filter');
+    Route::get('/document/submissions', [DocumentController::class, 'submissionsIndex'])->name('document.submissions.index');
+    Route::delete('/document/submissions/{submission_id}', [DocumentController::class, 'destroy'])->name('document.submissions.destroy');
     Route::post('/export-document', [ExcelController::class, 'export']);
     Route::get('/performance-report', [ExcelController::class, 'performanceReport'])->name('performance.report');
     Route::get('/export-performance-report', [ExcelController::class, 'exportPerformanceReport'])->name('export.performance.report');

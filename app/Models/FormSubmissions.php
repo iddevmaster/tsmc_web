@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class FormSubmissions extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'submission_id',
@@ -35,6 +36,16 @@ class FormSubmissions extends Model
     public function getVehicle()
     {
         return $this->belongsTo(Vehicle::class, 'vehicle_id', 'id');
+    }
+
+    public function submittedByUser()
+    {
+        return $this->belongsTo(User::class, 'submitted_by', 'id');
+    }
+
+    public function organization()
+    {
+        return $this->belongsTo(Organization::class, 'org', 'id');
     }
 
     public function getSubmissionValues()

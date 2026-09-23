@@ -59,6 +59,24 @@ trait BuildsFormTestData
         return $user->fresh();
     }
 
+    private function makeTsmcAdmin(): User
+    {
+        $admin = User::create([
+            'user_id' => Str::uuid(),
+            'username' => 'tsmcadmin',
+            'password' => bcrypt('password'),
+            'is_tsm' => false,
+        ]);
+
+        User_detail::create([
+            'user_id' => $admin->id,
+            'fname' => 'admin',
+            'lname' => 'tsmcadmin',
+        ]);
+
+        return $admin->fresh();
+    }
+
     private function makeForm(Organization $org, array $overrides = []): Form
     {
         return Form::create(array_merge([
