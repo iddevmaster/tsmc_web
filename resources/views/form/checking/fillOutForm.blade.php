@@ -82,6 +82,24 @@
                                                                 <input type="number" class="form-control ms-2" x-model="subfield.answer" placeholder="กรอกข้อมูล">
                                                             </template>
 
+                                                            <!-- Input Type: Date -->
+                                                            <template x-if="subfield.type === 'date'">
+                                                                <input type="date" class="form-control ms-2" x-model="subfield.answer">
+                                                            </template>
+
+                                                            <!-- Input Type: Autocomplete (Text + Options) -->
+                                                            <template x-if="subfield.type === 'autocomplete'">
+                                                                <div>
+                                                                    <input type="text" class="form-control ms-2" x-model="subfield.answer" :list="'dl-' + subfield.id" placeholder="กรอกหรือเลือกคำตอบ">
+                                                                    <datalist :id="'dl-' + subfield.id">
+                                                                        <template x-for="option in subfield.options" :key="option.value">
+                                                                            <option :value="option.value"></option>
+                                                                        </template>
+                                                                    </datalist>
+                                                                </div>
+                                                            </template>
+
+
                                                             <!-- Select Dropdown -->
                                                             <template x-if="subfield.type === 'select'">
                                                                 <div class="d-flex gap-2">
