@@ -44,7 +44,7 @@ class FormField extends Model
             return null;
         }
 
-        $prefix = now()->year . '-';
+        $prefix = now()->format('Ymd') . '-';
 
         $lastValue = FormSubmissionValue::where('field_id', $this->id)
             ->where('value', 'like', $prefix . '%')
