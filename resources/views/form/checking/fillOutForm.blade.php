@@ -282,6 +282,8 @@
                             : field.subfields;
 
                         if (field.type === 'date') return { ...field, answer: today, subfields: restoredSubfields };
+                        // เลขที่งาน auto ใช้ค่าที่ระบบ run ให้ใหม่เสมอ ไม่ดึงจาก history
+                        if (field.type === 'job_number') return { ...field, subfields: restoredSubfields };
                         return { ...field, answer: savedField?.answer ?? field.answer, subfields: restoredSubfields };
                     });
                 },
