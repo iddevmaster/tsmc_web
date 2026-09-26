@@ -351,7 +351,6 @@ class DocumentController extends Controller
         $source = FormSubmissions::where('submission_id', $submission_id)->first();
         $isValidSource = $source
             && $this->chainService->canAccessSubmission($source)
-            && $source->form_id !== $targetForm->id
             && $source->created_at >= now()->startOfDay()
             && $source->created_at <= now();
 

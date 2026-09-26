@@ -28,7 +28,6 @@ class FormImportService
         }
 
         $submissions = FormSubmissions::where('org', $orgId)
-            ->where('form_id', '!=', $targetForm->id)
             ->whereBetween('created_at', [now()->startOfDay(), now()])
             ->orderByDesc('created_at')
             ->get()
@@ -72,7 +71,7 @@ class FormImportService
     public function matchedValues(FormSubmissions $source, Form $targetForm): array
     {
         $sourceForm = Form::find($source->form_id);
-        if (!$sourceForm || $sourceForm->id === $targetForm->id) {
+        if (!$sourceForm) {
             return ['values' => [], 'user_id' => null, 'vehicle_id' => null];
         }
 
