@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
 
 class FormField extends Model
 {
@@ -44,9 +45,13 @@ class FormField extends Model
             return null;
         }
 
+        $user = Auth::user();
+        $orgId = $user?->is_tsm ? session('connected_org') : $user?->userDetail?->org;
+
         $prefix = now()->format('Ymd') . '-';
 
         $lastValue = FormSubmissionValue::where('field_id', $this->id)
+            ->whereIn('submission_id', FormSubmissions::where('org', $orgId)->select('id'))
             ->where('value', 'like', $prefix . '%')
             ->orderByDesc('value')
             ->value('value');
