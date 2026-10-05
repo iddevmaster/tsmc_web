@@ -131,8 +131,8 @@
                                                                 <div class="d-flex gap-2">
                                                                     <template x-for="option in subfield.options" :key="option.value">
                                                                         <div class="w-100">
-                                                                            <input type="radio" x-model="subfield.answer" class="btn-check" :value="option.value" :name="subfield.id" :id="index + option.value" autocomplete="off" :checked="option.value === subfield.answer">
-                                                                            <label class="btn btn-outline-primary w-100" :for="index + option.value" x-text="option.value"></label>
+                                                                            <input type="radio" x-model="subfield.answer" class="btn-check" :value="option.value" :name="subfield.id" :id="subfield.id + '-' + option.value" autocomplete="off" :checked="option.value === subfield.answer">
+                                                                            <label class="btn btn-outline-primary w-100" :for="subfield.id + '-' + option.value" x-text="option.value"></label>
                                                                         </div>
                                                                     </template>
                                                                 </div>
