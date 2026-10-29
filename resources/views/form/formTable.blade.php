@@ -49,7 +49,7 @@
                                                     <a href="{{ route('form.edit', ['form_category' => $category_name, 'id' => $form->form_id]) }}" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="แก้ไข">
                                                         <i class="bi bi-pencil-square"></i>
                                                     </a>
-                                                    <button type="button" class="btn btn-danger btn-sm delete-data-btn" del-id="{{ $form->id }}" del-target="form" data-bs-toggle="tooltip" data-bs-title="ลบ">
+                                                    <button type="button" class="btn btn-danger btn-sm delete-data-btn" del-id="{{ $form->id }}" del-target="forms/{{ rawurlencode($category_name) }}/form"data-bs-toggle="tooltip" data-bs-title="ลบ">
                                                         <i class="bi bi-trash"></i>
                                                     </button>
                                                 @endif
